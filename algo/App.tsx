@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import MyApp from "./MyApp"
+import MyApp from "./Neural"
 import type {PropsWithChildren} from 'react';
 import {
   SafeAreaView,
@@ -25,17 +25,12 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
+import Neural from './Neural';
 
 type SectionProps = PropsWithChildren<{
   title: string;
 }>;
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-    return (
-      <MyApp />
-  );
-}
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
@@ -45,7 +40,7 @@ function App(): React.JSX.Element {
   };
 
   return (
-      <MyApp />
+      <Neural />
   );
 }
 

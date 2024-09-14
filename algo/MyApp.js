@@ -1,88 +1,215 @@
-import { Text, View, StyleSheet, SafeAreaView } from 'react-native';
-import React, { Component } from 'react';
+import React from 'react';
+import { StyleSheet, Text, View, TextInput, Button, SafeAreaView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons'; // Para Android
+import Ionicons from 'react-native-vector-icons/Ionicons'; // Para iOS
 
-export default class MyApp extends Component {
+import { API_KEY } from './utils/WeatherAPIKey';
+import Weather from './components/Weather';
+
+export default class App extends React.Component {
+  state = {
+    isLoading: true,
+    temperature: 0,
+    weatherCondition: '',
+    error: null,
+    city: '',
+    defaultMessage: 'Enter a city to get the weather',
+    hasError: false,
+  };
+
+  handleCityChange = (city) => {
+    this.setState({ city });
+  };
+
+  fetchWeather = () => {
+    const { city } = this.state;
+    if (city) {
+      console.log(`Fetching weather data for city: ${city}`);
+      fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`)
+        .then(res => {
+          console.log('API response status:', res.status);
+          return res.json();
+        })
+        .then(json => {
+          console.log('API response JSON:', json);
+          console.log(json.weather[0].main);
+          if (json.cod === 200) {
+            this.setState({
+              weatherCondition: json.weather[0].main,
+              temperature: json.main.temp,
+              isLoading: false,
+              error: null,
+              hasError: false,
+            },() => {
+              console.log('State after setState:', this.state);
+            });
+          } else {
+            this.setState({
+              error: 'City not found',
+              isLoading: false,
+              hasError: true,
+            });
+          }
+        })
+        .catch(error => {
+          console.log('Error fetching weather data:', error);
+          this.setState({
+            error: 'Error fetching weather data',
+            isLoading: false,
+            hasError: true,
+          });
+        });
+    } else {
+      this.setState({
+        error: 'Please enter a city name',
+        isLoading: false,
+        hasError: true,
+      });
+    }
+  };
+
+  handleKeyPress = ({ nativeEvent }) => {
+    if (nativeEvent.key === 'Enter') {
+      this.fetchWeather();
+    }
+  };
+
   render() {
+    const { isLoading, weatherCondition, temperature, error, city, defaultMessage, hasError } = this.state;
+    
+    if (hasError) {
+      return (
+        <SafeAreaView style={styles.container}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorTitle}>Something went wrong!</Text>
+            <Text style={styles.errorMessage}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => this.setState({ hasError: false, isLoading: true })}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <Text style={styles.header}>Encabezado Grande</Text>
-          <Text style={styles.subHeader}>Encabezado Medio</Text>
-          <Text style={styles.smallText}>Texto Pequeño</Text>
-          <Text style={styles.blueText}>Texto Azul</Text>
-          <Text style={styles.redText}>Texto Rojo y Subrayado</Text>
-          <Text style={styles.greenItalicText}>Texto Verde y Cursiva</Text>
-          <Text style={styles.rightAlignedText}>Texto Alineado a la Derecha</Text>
-          <Text style={styles.centerAlignedText}>Texto Centrado</Text>
-          <Text style={styles.boldText}>Texto en Negrita</Text>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.inputContainer}>
+          {Platform.OS === 'ios' ? (
+            <Ionicons name="ios-search" size={24} color="gray" style={styles.icon} /> // Ícono para iOS
+          ) : (
+            <MaterialIcons name="search" size={24} color="gray" style={styles.icon} /> // Ícono para Android
+          )}
+          <TextInput
+            style={styles.input}
+            placeholder="Enter city name"
+            value={city}
+            onChangeText={this.handleCityChange}
+            onKeyPress={this.handleKeyPress}
+          />
         </View>
+        <TouchableOpacity style={styles.button} onPress={this.fetchWeather}>
+          <Text style={styles.buttonText}>Get Weather</Text>
+        </TouchableOpacity>
+
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#ff6347" />
+            <Text style={styles.loadingText}>{defaultMessage}</Text>
+          </View>
+        ) : (
+          weatherCondition ? ( // Verifica que weatherCondition no esté vacío
+            <Weather weatherCondition={weatherCondition} temperature={temperature} />
+          ) : (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>{defaultMessage}</Text>
+            </View>
+          )
+        )}
       </SafeAreaView>
     );
   }
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f8f9fa', // Fondo claro opcional
-  },
   container: {
     flex: 1,
-    justifyContent: 'flex-start',
+    backgroundColor: '#87cefa',
+    padding: 20,
+  },
+  inputContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 20, // Ajuste de margen superior adicional
+    backgroundColor: '#ffffff',
+    borderColor: '#dddddd',
+    borderWidth: 1,
+    borderRadius: 30,
+    paddingHorizontal: 15,
+    marginBottom: 20,
   },
-  header: {
-    fontSize: 32, // Tamaño de fuente grande
-    fontWeight: 'bold', // Negrita para un encabezado
-    color: '#000', // Color de texto negro
+  icon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    height: 40,
+    fontSize: 16,
+  },
+  button: {
+    backgroundColor: '#ff6347',
+    borderRadius: 30,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 20,
+    color: '#666666',
+    marginTop: 10,
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffebee',
+    borderRadius: 10,
+    padding: 20,
+  },
+  errorTitle: {
+    fontSize: 24,
+    color: '#d32f2f',
+    fontWeight: 'bold',
     marginBottom: 10,
   },
-  subHeader: {
-    fontSize: 24, // Tamaño de fuente medio
-    fontWeight: '600', // Semi-negrita
-    color: '#555', // Color de texto gris oscuro
-    marginBottom: 10,
+  errorMessage: {
+    fontSize: 18,
+    color: '#d32f2f',
+    textAlign: 'center',
+    marginBottom: 20,
   },
-  smallText: {
-    fontSize: 14, // Tamaño de fuente pequeño
-    color: '#777', // Color de texto gris medio
-    marginBottom: 10,
+  retryButton: {
+    backgroundColor: '#d32f2f',
+    borderRadius: 30,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignItems: 'center',
   },
-  blueText: {
-    fontSize: 20, // Tamaño de fuente medio
-    color: 'blue', // Color de texto azul
-    marginBottom: 10,
-  },
-  redText: {
-    fontSize: 20, // Tamaño de fuente medio
-    color: 'red', // Color de texto rojo
-    textDecorationLine: 'underline', // Subrayado
-    marginBottom: 10,
-  },
-  greenItalicText: {
-    fontSize: 20, // Tamaño de fuente medio
-    color: 'green', // Color de texto verde
-    fontStyle: 'italic', // Cursiva
-    marginBottom: 10,
-  },
-  rightAlignedText: {
-    fontSize: 20, // Tamaño de fuente medio
-    color: '#000', // Color de texto negro
-    textAlign: 'right', // Alineado a la derecha
-    alignSelf: 'stretch', // Abarca todo el ancho
-    marginBottom: 10,
-  },
-  centerAlignedText: {
-    fontSize: 20, // Tamaño de fuente medio
-    color: '#000', // Color de texto negro
-    textAlign: 'center', // Centrado
-    marginBottom: 10,
-  },
-  boldText: {
-    fontSize: 20, // Tamaño de fuente medio
-    color: '#000', // Color de texto negro
-    fontWeight: 'bold', // Negrita
-    marginBottom: 10,
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
