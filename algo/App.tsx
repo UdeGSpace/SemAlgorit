@@ -6,7 +6,6 @@
  */
 
 import React from 'react';
-import MyApp from "./Neural"
 import type {PropsWithChildren} from 'react';
 import {
   SafeAreaView,
@@ -40,7 +39,7 @@ function App(): React.JSX.Element {
   };
 
   return (
-      <Neural />
+      <Neural/>
   );
 }
 

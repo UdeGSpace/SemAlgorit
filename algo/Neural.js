@@ -1,9 +1,13 @@
-import { SafeAreaView, Text, TextInput, View, StyleSheet, TouchableOpacity, Button } from 'react-native';
+
 import React, { Component } from 'react';
+import { SafeAreaView, Text, TextInput, View, StyleSheet, TouchableOpacity } from 'react-native';
+import Neurona from './models/neurona';
+import AdministrarNeuronas from './controller/administrarNeuronas';
 
 export default class Neural extends Component {
   constructor(props) {
     super(props);
+    this.neuronasController = new AdministrarNeuronas();
     this.state = {
       neuron: {
         id_: 0,
@@ -14,17 +18,21 @@ export default class Neural extends Component {
         green: 0,
         blue: 0,
       },
-      selectedField: '', // Campo seleccionado
+      selectedField: '',
     };
+
   }
 
   handleInputChange = (field, value) => {
     let newValue = value;
 
-    if (field === 'id_' || field === 'posicion_x' || field === 'posicion_y' || field === 'red' || field === 'green' || field === 'blue') {
-      newValue = parseInt(value, 10) || 0; // Enteros
+    if (['id_', 'posicion_x', 'posicion_y', 'red', 'green', 'blue'].includes(field)) {
+      newValue = value === '' ? '' : parseInt(value, 10) || 0; // Mantener cadena vacía
     } else if (field === 'voltaje') {
-      newValue = parseFloat(value) || 0.0; // Flotante
+      // Permitir que el campo sea un string temporalmente (incluyendo punto decimal)
+      if (value === '' || value === '.' || /^-?\d*\.?\d*$/.test(value)) {
+        newValue = value;
+      }
     }
 
     this.setState((prevState) => ({
@@ -33,31 +41,75 @@ export default class Neural extends Component {
         [field]: newValue,
       },
     }));
-  };
+  };  
 
   handleFocus = (field) => {
     this.setState({ selectedField: field });
   };
 
   handleBlur = () => {
-    // No deseleccionar inmediatamente, permitimos seguir interactuando con el campo
     setTimeout(() => {
       this.setState({ selectedField: '' });
     }, 100);
   };
 
-  handleSave = () => {
-    // Función para manejar la acción de guardar
-    alert('Valores guardados:\n' + JSON.stringify(this.state.neuron, null, 2));
+  // Función para manejar el guardado en el controlador
+  handleAddAtStart = () => {
+    const nuevaNeurona = new Neurona(
+      this.state.neuron.id_,
+      this.state.neuron.voltaje,
+      this.state.neuron.posicion_x,
+      this.state.neuron.posicion_y,
+      this.state.neuron.red,
+      this.state.neuron.green,
+      this.state.neuron.blue
+    );
+    this.neuronasController.agregarInicio(nuevaNeurona);
+    alert('Neurona agregada al inicio');
+    this.resetForm();
   };
 
+  handleAddAtEnd = () => {
+    const nuevaNeurona = new Neurona(
+      this.state.neuron.id_,
+      this.state.neuron.voltaje,
+      this.state.neuron.posicion_x,
+      this.state.neuron.posicion_y,
+      this.state.neuron.red,
+      this.state.neuron.green,
+      this.state.neuron.blue
+    );
+    this.neuronasController.agregarFinal(nuevaNeurona);
+    alert('Neurona agregada al final');
+    this.resetForm();
+  };
+
+  // Mostrar todas las neuronas
+  handleShowAll = () => {
+    const neurons = this.neuronasController.listaNeuronas;
+    alert(JSON.stringify(neurons)); // Simple alert to show neuron data. 
+  };
+    resetForm = () => {
+      this.setState({
+        neuron: {
+          id_: 0,
+          voltaje: 0.0,
+          posicion_x: 0,
+          posicion_y: 0,
+          red: 0,
+          green: 0,
+          blue: 0,
+        },
+      });
+    };
+  
   render() {
     const { neuron, selectedField } = this.state;
 
     return (
       <View style={styles.container}>
         <SafeAreaView>
-          <Text style={styles.title}>Capturar Neurona</Text>
+        <Text style={styles.title}>Capturar Neurona</Text>
 
           <View style={styles.formContainer}>
             {/* ID Field */}
@@ -83,7 +135,7 @@ export default class Neural extends Component {
                 <Text style={[styles.label, selectedField === 'voltaje' && styles.selectedLabel]}>Voltaje:</Text>
                 <TextInput
                   style={[styles.input, selectedField === 'voltaje' && styles.selectedInput]}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   value={neuron.voltaje.toString()}
                   onChangeText={(value) => this.handleInputChange('voltaje', value)}
                   onFocus={() => this.handleFocus('voltaje')}
@@ -178,10 +230,16 @@ export default class Neural extends Component {
                 />
               </View>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.addButton} onPress={this.handleAddAtStart}>
+              <Text style={styles.addButtonText}>Agregar al Inicio</Text>
+            </TouchableOpacity>
 
-            {/* Save Button */}
-            <TouchableOpacity style={styles.saveButton} onPress={this.handleSave}>
-              <Text style={styles.saveButtonText}>Guardar</Text>
+            <TouchableOpacity style={styles.addButton} onPress={this.handleAddAtEnd}>
+              <Text style={styles.addButtonText}>Agregar al Final</Text>
+            </TouchableOpacity>
+            {/* Botón para mostrar todas las neuronas */}
+            <TouchableOpacity style={styles.addButton} onPress={this.handleShowAll}>
+              <Text style={styles.addButtonText}>Mostrar Todas</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -193,27 +251,27 @@ export default class Neural extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000', // Fondo negro
+    backgroundColor: '#000000',
     padding: 20,
   },
   title: {
     fontSize: 24,
-    color: '#00FF00', // Verde brillante
+    color: '#00FF00',
     textAlign: 'center',
     marginBottom: 20,
-    fontFamily: 'monospace', // Estilo de fuente de terminal
+    fontFamily: 'monospace',
   },
   formContainer: {
     borderColor: '#00FF00',
     borderWidth: 2,
-    borderRadius: 10, // Borde redondeado
+    borderRadius: 10,
     padding: 15,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#001a00', // Fondo oscuro para los inputs
-    borderColor: '#00FF00', // Bordes verdes brillantes
+    backgroundColor: '#001a00',
+    borderColor: '#00FF00',
     borderWidth: 1,
     borderRadius: 5,
     paddingHorizontal: 10,
@@ -226,7 +284,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   selectedLabel: {
-    color: '#000000', // Invertir a negro cuando está seleccionado
+    color: '#000000',
   },
   input: {
     flex: 1,
@@ -234,25 +292,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'monospace',
     paddingVertical: 5,
-    backgroundColor: '#001a00', // Color de fondo oscuro del campo
+    backgroundColor: '#001a00',
   },
   selectedRow: {
-    backgroundColor: '#00FF00', // Fondo verde brillante cuando está seleccionado
-    borderColor: '#000000', // Borde negro cuando está seleccionado
+    backgroundColor: '#00FF00',
+    borderColor: '#000000',
   },
   selectedInput: {
-    backgroundColor: '#00FF00', // Invertir fondo del campo de texto a negro cuando está seleccionado
-    color: '#000000', // Texto verde cuando está seleccionado
+    backgroundColor: '#00FF00',
+    color: '#000000',
   },
-  saveButton: {
-    backgroundColor: '#00FF00', // Botón verde
+  addButton: {
+    backgroundColor: '#00FF00',
     borderRadius: 5,
     padding: 10,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 10,
   },
-  saveButtonText: {
-    color: '#000000', // Texto negro para el botón
+  addButtonText: {
+    color: '#000000',
     fontSize: 18,
     fontFamily: 'monospace',
   },
